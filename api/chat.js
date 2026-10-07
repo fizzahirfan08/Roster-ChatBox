@@ -3,7 +3,7 @@
 //
 // Env vars (Vercel -> Project -> Settings -> Environment Variables):
 //   GROQ_API_KEY   required (free key from console.groq.com)
-//   ROSTER_MODEL   optional, defaults to llama3-8b-8192
+//   ROSTER_MODEL   optional, defaults to llama-3.1-8b-instant
 
 const MODEL = process.env.ROSTER_MODEL || "llama-3.1-8b-instant";
 
