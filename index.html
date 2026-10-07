@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Roster — chat</title>
+<meta name="description" content="Manage contacts by chatting: add, edit, delete and search in plain language." />
+<meta name="theme-color" content="#FBFAF8" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#11161A" media="(prefers-color-scheme: dark)" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232F6F6B'/%3E%3Ctext x='16' y='22' font-family='Helvetica,Arial,sans-serif' font-size='17' font-weight='700' fill='%23fff' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --paper:#FBFAF8; --surface:#FFFFFF; --surface-2:#F4F3EF;
+  --ink:#16202B; --muted:#63717F; --line:#E4E1DB;
+  --accent:#2F6F6B; --accent-soft:#E9F1EF; --accent-ink:#FFFFFF;
+  --warn:#A8442A; --warn-soft:#F8EDE9;
+  --shadow: 0 1px 2px rgba(20,32,43,.05), 0 8px 24px -16px rgba(20,32,43,.35);
+  --sans:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display:"Archivo", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  box-sizing:border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:#11161A; --surface:#191F25; --surface-2:#1E252C;
+    --ink:#E9EEF2; --muted:#93A1AD; --line:#29323A;
+    --accent:#5CA9A2; --accent-soft:#1D2B2A; --accent-ink:#0D1315;
+    --warn:#E08163; --warn-soft:#2B1E1A;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper:#11161A; --surface:#191F25; --surface-2:#1E252C;
+  --ink:#E9EEF2; --muted:#93A1AD; --line:#29323A;
+  --accent:#5CA9A2; --accent-soft:#1D2B2A; --accent-ink:#0D1315;
+  --warn:#E08163; --warn-soft:#2B1E1A;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { height:100%; scroll-padding-top: env(safe-area-inset-top, 0px); -webkit-text-size-adjust:100%; }
+body { margin:0; min-height:100%; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+::selection { background:var(--accent); color:var(--accent-ink); }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+
+.wrap { max-width:1060px; margin:0 auto; padding:22px 20px 20px; display:flex; flex-direction:column; height:100dvh; }
+
+/* masthead */
+.masthead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; flex:0 0 auto; }
+.brand { display:flex; align-items:center; gap:12px; min-width:0; }
+.mark { width:34px; height:34px; border-radius:9px; background:var(--accent); color:var(--accent-ink); flex:0 0 auto;
+  display:grid; place-items:center; font-family:var(--display); font-weight:700; font-size:16px; }
+h1 { font-family:var(--display); font-size:24px; font-weight:700; letter-spacing:-.025em; margin:0; line-height:1.1; }
+.sub { color:var(--muted); font-size:14px; margin:2px 0 0; }
+.head-btns { display:flex; gap:8px; }
+.pill { border:1px solid var(--line); background:var(--surface); color:var(--muted); font:inherit; font-size:13px;
+  padding:8px 13px; border-radius:999px; cursor:pointer; white-space:nowrap; }
+.pill:hover { color:var(--ink); border-color:var(--muted); }
+#toggleList { display:none; }
+
+/* layout */
+.cols { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:20px; flex:1 1 auto; min-height:0; }
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); min-height:0; }
+@media (max-width: 860px) {
+  .cols { grid-template-columns:1fr; }
+  .side { display:none; }
+  body.show-list .side { display:flex; }
+  body.show-list .chat { display:none; }
+  #toggleList { display:inline-block; }
+}
+
+/* chat */
+.chat { display:flex; flex-direction:column; overflow:hidden; }
+.log { flex:1 1 auto; overflow-y:auto; padding:18px 18px 8px; display:flex; flex-direction:column; gap:12px; scroll-behavior:smooth; }
+.msg { max-width:min(560px, 88%); display:flex; flex-direction:column; gap:6px; }
+.msg.user { align-self:flex-end; align-items:flex-end; }
+.msg.bot { align-self:flex-start; }
+.bubble { padding:10px 14px; border-radius:14px; white-space:pre-wrap; overflow-wrap:anywhere; font-size:15px; }
+.msg.user .bubble { background:var(--accent); color:var(--accent-ink); border-bottom-right-radius:4px; }
+.msg.bot .bubble { background:var(--surface-2); border:1px solid var(--line); border-bottom-left-radius:4px; }
+.msg.bot.error .bubble { background:var(--warn-soft); border-color:transparent; color:var(--ink); }
+.chip { align-self:flex-start; font:inherit; font-size:13px; padding:5px 11px; border-radius:999px; cursor:pointer;
+  background:transparent; color:var(--accent); border:1px solid var(--accent); }
+.chip:hover { background:var(--accent-soft); }
+.chip:disabled { opacity:.5; cursor:default; background:transparent; }
+.status { color:var(--muted); font-size:14px; display:flex; align-items:center; gap:8px; }
+.dots { display:inline-flex; gap:3px; }
+.dots i { width:5px; height:5px; border-radius:50%; background:var(--muted); opacity:.35; }
+@media (prefers-reduced-motion: no-preference) {
+  .dots i { animation: blink 1.1s infinite; }
+  .dots i:nth-child(2) { animation-delay:.18s; } .dots i:nth-child(3) { animation-delay:.36s; }
+  @keyframes blink { 0%,80%,100% { opacity:.25; } 40% { opacity:1; } }
+}
+
+details.trace { font-size:12.5px; color:var(--muted); }
+details.trace summary { cursor:pointer; user-select:none; width:max-content; }
+details.trace summary:hover { color:var(--ink); }
+.trace-step { margin-top:8px; }
+.trace-step b { display:block; font-weight:600; color:var(--ink); margin-bottom:2px; }
+.trace-step pre { margin:0; padding:8px 10px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+  font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--ink); }
+
+.starter { padding:6px 18px 0; display:flex; flex-wrap:wrap; gap:8px; }
+.starter button { font:inherit; font-size:13px; color:var(--muted); background:var(--surface); border:1px solid var(--line);
+  border-radius:999px; padding:6px 12px; cursor:pointer; }
+.starter button:hover { color:var(--ink); border-color:var(--muted); }
+
+.composer { display:flex; gap:10px; align-items:flex-end; padding:14px 16px 16px; border-top:1px solid var(--line); margin-top:10px; }
+.composer textarea { flex:1; resize:none; font:inherit; font-size:15px; color:var(--ink); background:var(--surface-2);
+  border:1px solid var(--line); border-radius:12px; padding:10px 12px; max-height:140px; line-height:1.45; }
+.composer textarea::placeholder { color:var(--muted); opacity:.7; }
+.composer textarea:focus { outline:none; border-color:var(--accent); background:var(--surface); box-shadow:0 0 0 3px var(--accent-soft); }
+.send { font:inherit; font-weight:500; font-size:15px; border:0; border-radius:12px; padding:10px 18px; cursor:pointer;
+  background:var(--accent); color:var(--accent-ink); height:42px; }
+.send:hover { filter:brightness(1.07); }
+.send:disabled { opacity:.5; cursor:default; filter:none; }
+
+/* side list */
+.side { display:flex; flex-direction:column; overflow:hidden; }
+.side-head { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.side-head h2 { font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:-.015em; margin:0; }
+.side-head span { font-size:13px; color:var(--muted); }
+.rows { list-style:none; margin:0; padding:0; overflow-y:auto; flex:1 1 auto; }
+.row { display:grid; grid-template-columns:34px minmax(0,1fr); gap:12px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); }
+.row:last-child { border-bottom:0; }
+.row.flash { background:var(--accent-soft); }
+.tile { width:34px; height:34px; border-radius:9px; display:grid; place-items:center; color:#fff;
+  font-family:var(--display); font-weight:600; font-size:14px; }
+.who { min-width:0; }
+.who .name { font-weight:500; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.who .num { font-size:13.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.empty { padding:34px 20px; text-align:center; color:var(--muted); font-size:14.5px; }
+.side-foot { padding:10px 16px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted); }
+@media (max-width: 520px) { .wrap { padding:16px 12px 12px; } .sub { display:none; } .msg { max-width:94%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">R</div>
+      <div>
+        <h1>Roster</h1>
+        <p class="sub">Tell it what to do with your contacts.</p>
+      </div>
+    </div>
+    <div class="head-btns">
+      <button class="pill" id="toggleList" type="button">Contacts</button>
+      <button class="pill" id="themeBtn" type="button"><span id="themeLabel">Dark</span></button>
+    </div>
+  </header>
+
+  <div class="cols">
+    <section class="panel chat" aria-label="Chat">
+      <div class="log" id="log" role="log" aria-live="polite"></div>
+      <div class="starter" id="starter"></div>
+      <form class="composer" id="composer">
+        <textarea id="input" rows="1" maxlength="600" placeholder="Add Ayesha Khan 0300 1234567" aria-label="Message"></textarea>
+        <button class="send" id="sendBtn" type="submit">Send</button>
+      </form>
+    </section>
+
+    <aside class="panel side" aria-label="Saved contacts">
+      <div class="side-head"><h2>Contacts</h2><span id="count">0</span></div>
+      <ul class="rows" id="rows"></ul>
+      <div class="empty" id="empty">Nothing saved yet. Ask Roster to add someone.</div>
+      <div class="side-foot">Changes happen through chat only.</div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+"use strict";
+
+var KEY = "roster.records.v1";          // same key as the original app, so existing contacts carry over
+var THEME_KEY = "roster.theme.v1";
+var $ = function (id) { return document.getElementById(id); };
+var els = { log:$("log"), input:$("input"), send:$("sendBtn"), form:$("composer"), rows:$("rows"),
+  empty:$("empty"), count:$("count"), starter:$("starter"), themeBtn:$("themeBtn"), themeLabel:$("themeLabel"),
+  toggleList:$("toggleList") };
+
+var records = [];
+var history = [];       // [{role:'user'|'assistant', text}]
+var busy = false;
+
+/* ================= storage ================= */
+function load() {
+  try {
+    var parsed = JSON.parse(localStorage.getItem(KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter(function (r) { return r && typeof r.name === "string"; }) : [];
+  } catch (e) { return []; }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(records)); } catch (e) {} }
+
+/* ================= helpers ================= */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function digits(s) { return (s || "").replace(/\D/g, ""); }
+function pub(r) { return { name: r.name, phone: r.phone }; }       // what the LLM is allowed to see
+function initials(n) {
+  var p = n.trim().split(/\s+/).filter(Boolean);
+  if (!p.length) return "?";
+  return (p.length === 1 ? p[0].slice(0, 2) : p[0][0] + p[p.length - 1][0]).toUpperCase();
+}
+function tint(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return "hsl(" + h + " 32% 42%)"; }
+function sameNumber(a, b) {
+  var x = digits(a).replace(/^0+/, ""), y = digits(b).replace(/^0+/, "");
+  if (!x || !y) return false;
+  if (x === y) return true;
+  return x.length >= 9 && y.length >= 9 && x.slice(-9) === y.slice(-9);
+}
+function cleanName(s) { return String(s || "").trim().replace(/\s+/g, " "); }
+function cleanPhone(s) { return String(s || "").trim().replace(/\s+/g, " "); }
+function checkPhone(p) {
+  var d = digits(p);
+  if (!d) return "A phone number is required.";
+  if (d.length < 7 || d.length > 15) return "A phone number needs 7 to 15 digits.";
+  if (!/^[\d\s()+\-.]+$/.test(p)) return "Phone numbers can only contain digits, spaces, +, - and ( ).";
+  return null;
+}
+
+/* ================= tools: the actual CRUD ================= */
+// Find one record from a name or number the user typed.
+function resolve(target) {
+  var t = cleanName(target).toLowerCase();
+  if (!t) return { error: "No contact was specified." };
+  var exact = records.filter(function (r) { return r.name.toLowerCase() === t; });
+  if (exact.length === 1) return { record: exact[0] };
+  var td = digits(target);
+  if (td.length >= 4) {
+    var byNum = records.filter(function (r) { return sameNumber(r.phone, target) || digits(r.phone).indexOf(td) !== -1; });
+    if (byNum.length === 1) return { record: byNum[0] };
+    if (byNum.length > 1) return { ambiguous: byNum.map(pub) };
+  }
+  var part = records.filter(function (r) { return r.name.toLowerCase().indexOf(t) !== -1; });
+  if (part.length === 1) return { record: part[0] };
+  if (part.length > 1 || exact.length > 1) return { ambiguous: (exact.length > 1 ? exact : part).map(pub) };
+  return { error: 'No saved contact matches "' + target + '".' };
+}
+
+var tools = {
+  create_contact: function (a) {
+    var name = cleanName(a.name), phone = cleanPhone(a.phone);
+    if (!name) return { ok: false, error: "A name is required." };
+    var bad = checkPhone(phone);
+    if (bad) return { ok: false, error: bad };
+    var clash = records.find(function (r) { return sameNumber(r.phone, phone); });
+    if (clash) return { ok: false, error: "That number is already saved for " + clash.name + "." };
+    var rec = { id: uid(), name: name, phone: phone, createdAt: Date.now(), updatedAt: Date.now() };
+    records.unshift(rec); save();
+    return { ok: true, created: pub(rec), total: records.length, _flash: rec.id };
+  },
+  update_contact: function (a) {
+    var f = resolve(a.target);
+    if (f.error) return { ok: false, error: f.error };
+    if (f.ambiguous) return { ok: false, error: "More than one contact matches.", ambiguous: f.ambiguous };
+    var r = f.record, before = pub(r);
+    var nn = a.new_name ? cleanName(a.new_name) : "", np = a.new_phone ? cleanPhone(a.new_phone) : "";
+    if (!nn && !np) return { ok: false, error: "Nothing to change: no new name or number was given." };
+    if (np) {
+      var bad = checkPhone(np);
+      if (bad) return { ok: false, error: bad };
+      var clash = records.find(function (x) { return x.id !== r.id && sameNumber(x.phone, np); });
+      if (clash) return { ok: false, error: "That number is already saved for " + clash.name + "." };
+    }
+    if (nn) r.name = nn;
+    if (np) r.phone = np;
+    r.updatedAt = Date.now(); save();
+    return { ok: true, before: before, after: pub(r), _flash: r.id };
+  },
+  delete_contact: function (a) {
+    var f = resolve(a.target);
+    if (f.error) return { ok: false, error: f.error };
+    if (f.ambiguous) return { ok: false, error: "More than one contact matches.", ambiguous: f.ambiguous };
+    var idx = records.indexOf(f.record);
+    var gone = records.splice(idx, 1)[0]; save();
+    return { ok: true, removed: pub(gone), remaining: records.length, _undo: { record: gone, index: idx } };
+  },
+  search_contacts: function (a) {
+    var q = cleanName(a.query).toLowerCase(), qd = digits(a.query);
+    if (!q) return { ok: false, error: "No search text was given." };
+    var hits = records.filter(function (r) {
+      if (r.name.toLowerCase().indexOf(q) !== -1) return true;
+      if (!qd) return false;
+      var d = digits(r.phone);
+      return d.indexOf(qd) !== -1 || d.indexOf(qd.replace(/^0+/, "")) !== -1;
+    });
+    return { ok: true, query: a.query, count: hits.length, matches: hits.slice(0, 15).map(pub) };
+  },
+  list_contacts: function (a) {
+    var list = records.slice();
+    if (a.sort === "name") list.sort(function (x, y) { return x.name.localeCompare(y.name, undefined, { sensitivity: "base" }); });
+    else if (a.sort === "oldest") list.sort(function (x, y) { return x.createdAt - y.createdAt; });
+    return { ok: true, total: list.length, contacts: list.slice(0, 15).map(pub) };
+  }
+};
+
+function runTool(name, args) {
+  if (!name) return { ok: true, note: "No tool was run." };
+  if (!tools[name]) return { ok: false, error: "Unknown tool: " + name };
+  try { return tools[name](args || {}); }
+  catch (e) { return { ok: false, error: "The action failed: " + e.message }; }
+}
+
+/* ================= API (3 separate LLM calls) ================= */
+function api(stage, payload) {
+  payload.stage = stage;
+  return fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) })
+    .then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.error || ("Server returned " + r.status));
+        return d;
+      });
+    });
+}
+
+/* ================= chat UI ================= */
+function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function scrollDown() { els.log.scrollTop = els.log.scrollHeight; }
+
+function addUser(text) {
+  var m = el("div", "msg user"); m.appendChild(el("div", "bubble", text));
+  els.log.appendChild(m); scrollDown();
+}
+function addStatus() {
+  var m = el("div", "msg bot"), s = el("div", "status");
+  var dots = el("span", "dots"); dots.innerHTML = "<i></i><i></i><i></i>";
+  var label = el("span", "", "Reading your message");
+  s.appendChild(dots); s.appendChild(label); m.appendChild(s);
+  els.log.appendChild(m); scrollDown();
+  return { node: m, set: function (t) { label.textContent = t; } };
+}
+function traceBlock(title, obj) {
+  var d = el("div", "trace-step"); d.appendChild(el("b", "", title));
+  d.appendChild(el("pre", "", typeof obj === "string" ? obj : JSON.stringify(obj, null, 2)));
+  return d;
+}
+function finishBot(status, text, trace, undo, isError) {
+  var m = status.node; m.innerHTML = ""; m.className = "msg bot" + (isError ? " error" : "");
+  m.appendChild(el("div", "bubble", text));
+  if (undo) {
+    var b = el("button", "chip", "Undo delete"); b.type = "button";
+    b.addEventListener("click", function () {
+      records.splice(Math.min(undo.index, records.length), 0, undo.record); save(); renderSide(undo.record.id);
+      b.textContent = "Restored " + undo.record.name; b.disabled = true;
+    });
+    m.appendChild(b);
+  }
+  if (trace) {
+    var d = el("details", "trace"); d.appendChild(el("summary", "", "How this was handled"));
+    trace.forEach(function (t) { d.appendChild(traceBlock(t[0], t[1])); });
+    m.appendChild(d);
+  }
+  scrollDown();
+}
+
+function setBusy(v) { busy = v; els.send.disabled = v; els.input.disabled = v; if (!v) els.input.focus(); }
+
+function handle(text) {
+  if (busy) return;
+  setBusy(true);
+  addUser(text);
+  els.starter.hidden = true;
+  var status = addStatus();
+  var trace = [];
+  var intent, call, result;
+
+  // Step 1: LLM reads the raw text and extracts structured intent
+  api("understand", { message: text, history: history })
+    .then(function (i) {
+      intent = i; trace.push(["1. Understood the message", i]);
+      status.set("Choosing an action");
+      // Step 2: separate LLM call chooses the tool + arguments
+      return api("tool", { intent: i });
+    })
+    .then(function (c) {
+      call = c; trace.push(["2. Tool call chosen", { tool: c.tool, args: c.args, note: c.note }]);
+      // Our own code runs the CRUD function
+      result = runTool(c.tool, c.args);
+      var shown = JSON.parse(JSON.stringify(result, function (k, v) { return k.charAt(0) === "_" ? undefined : v; }));
+      trace.push(["Result of running " + (c.tool || "nothing"), shown]);
+      renderSide(result._flash);
+      status.set("Writing a reply");
+      // Step 3: final LLM turns the raw result into a readable reply
+      return api("reply", { message: text, tool: c.tool, args: c.args, result: shown, note: c.note });
+    })
+    .then(function (r) {
+      history.push({ role: "user", text: text }, { role: "assistant", text: r.text });
+      finishBot(status, r.text, trace, result && result._undo, false);
+    })
+    .catch(function (e) {
+      var msg = "Could not reach the assistant: " + e.message;
+      if (result && result.ok) msg = "The change was saved, but the reply step failed (" + e.message + "). Check the contacts list on the right.";
+      finishBot(status, msg, trace.length ? trace : null, result && result._undo, true);
+    })
+    .then(function () { setBusy(false); });
+}
+
+/* ================= side list ================= */
+function renderSide(flashId) {
+  els.rows.innerHTML = "";
+  els.count.textContent = records.length + (records.length === 1 ? " contact" : " contacts");
+  els.empty.hidden = records.length > 0;
+  records.forEach(function (r) {
+    var li = el("li", "row" + (r.id === flashId ? " flash" : ""));
+    var t = el("div", "tile", initials(r.name)); t.style.background = tint(r.name); t.setAttribute("aria-hidden", "true");
+    var w = el("div", "who"); w.appendChild(el("div", "name", r.name)); w.appendChild(el("div", "num", r.phone));
+    li.appendChild(t); li.appendChild(w); els.rows.appendChild(li);
+  });
+  if (flashId) setTimeout(function () { var f = els.rows.querySelector(".flash"); if (f) f.classList.remove("flash"); }, 1600);
+}
+
+/* ================= input ================= */
+function grow() { els.input.style.height = "auto"; els.input.style.height = Math.min(els.input.scrollHeight, 140) + "px"; }
+els.input.addEventListener("input", grow);
+els.input.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); els.form.requestSubmit(); }
+});
+els.form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  var t = els.input.value.trim();
+  if (!t) return;
+  els.input.value = ""; grow(); handle(t);
+});
+
+["Add Ayesha Khan 0300 1234567", "Show all my contacts", "Change Ayesha's number to 0321 7654321", "Delete Ayesha"].forEach(function (s) {
+  var b = el("button", "", s); b.type = "button";
+  b.addEventListener("click", function () { els.input.value = s; grow(); els.input.focus(); });
+  els.starter.appendChild(b);
+});
+
+els.toggleList.addEventListener("click", function () {
+  var on = document.body.classList.toggle("show-list");
+  els.toggleList.textContent = on ? "Chat" : "Contacts";
+});
+
+/* ================= theme ================= */
+function dark() { var s = document.documentElement.getAttribute("data-theme"); return s ? s === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; }
+function paintTheme() { els.themeLabel.textContent = dark() ? "Light" : "Dark"; }
+els.themeBtn.addEventListener("click", function () {
+  var n = dark() ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", n);
+  try { localStorage.setItem(THEME_KEY, n); } catch (e) {}
+  paintTheme();
+});
+try { var st = localStorage.getItem(THEME_KEY); if (st === "dark" || st === "light") document.documentElement.setAttribute("data-theme", st); } catch (e) {}
+paintTheme();
+
+/* ================= boot ================= */
+records = load();
+renderSide();
+var hello = el("div", "msg bot");
+hello.appendChild(el("div", "bubble", "Hi. I can add, edit, delete and search your contacts. Just tell me what you need, for example: \"Add Ayesha Khan 0300 1234567\"."));
+els.log.appendChild(hello);
+els.input.focus();
+})();
+</script>
+</body>
+</html>
