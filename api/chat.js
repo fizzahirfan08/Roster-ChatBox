@@ -3,7 +3,7 @@
 //
 // Env vars (Vercel -> Project -> Settings -> Environment Variables):
 //   GROQ_API_KEY   required (free key from console.groq.com)
-//   ROSTER_MODEL   optional, defaults to llama-3.3-70b-versatile
+//   ROSTER_MODEL   optional, defaults to llama3-8b-8192
 
 const MODEL = process.env.ROSTER_MODEL || "llama3-8b-8192";
 
@@ -125,7 +125,8 @@ async function llm({ system, user, tools, max_tokens }) {
   });
   const data = await r.json();
   if (!r.ok) throw new Error((data.error && data.error.message) || "Groq API error " + r.status);
-  return data.choices && data.choices[0] ? data.choices[0].message : {};
+  if (!data.choices || !data.choices[0]) throw new Error("Invalid response from Groq API");
+  return data.choices[0].message;
 }
 
 function clip(s, n) { return String(s == null ? "" : s).slice(0, n); }
@@ -172,7 +173,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") { res.status(405).json({ error: "POST only" }); return; }
   if (!process.env.GROQ_API_KEY) { res.status(500).json({ error: "GROQ_API_KEY is not set on the server." }); return; }
 
- try {
+  try {
     let body = req.body || {};
     if (typeof body === "string") {
       try { body = JSON.parse(body); } catch (e) { body = {}; }
