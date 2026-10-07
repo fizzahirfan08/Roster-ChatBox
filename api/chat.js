@@ -5,7 +5,7 @@
 //   GROQ_API_KEY   required (free key from console.groq.com)
 //   ROSTER_MODEL   optional, defaults to llama3-8b-8192
 
-const MODEL = process.env.ROSTER_MODEL || "llama3-8b-8192";
+const MODEL = process.env.ROSTER_MODEL || "llama-3.3-70b-versatile";
 
 /* ---------------- Stage 1: understand the text ---------------- */
 const UNDERSTAND_SYSTEM = `You are step 1 of a contact-manager pipeline. You do NOT manage contacts.
