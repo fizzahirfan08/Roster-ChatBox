@@ -5,7 +5,7 @@
 //   GROQ_API_KEY   required (free key from console.groq.com)
 //   ROSTER_MODEL   optional, defaults to llama-3.3-70b-versatile
 
-const MODEL = process.env.ROSTER_MODEL || "llama-3.1-8b-instant";
+const MODEL = process.env.ROSTER_MODEL || "llama3-8b-8192";
 
 /* ---------------- Stage 1: understand the text ---------------- */
 const UNDERSTAND_SYSTEM = `You are step 1 of a contact-manager pipeline. You do NOT manage contacts.
@@ -172,8 +172,11 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") { res.status(405).json({ error: "POST only" }); return; }
   if (!process.env.GROQ_API_KEY) { res.status(500).json({ error: "GROQ_API_KEY is not set on the server." }); return; }
 
-  try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+ try {
+    let body = req.body || {};
+    if (typeof body === "string") {
+      try { body = JSON.parse(body); } catch (e) { body = {}; }
+    }
     let out;
     if (body.stage === "understand") out = await stageUnderstand(body);
     else if (body.stage === "tool") out = await stageTool(body);
